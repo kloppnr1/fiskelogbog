@@ -208,13 +208,13 @@ export function TodayForecast() {
         <div className="space-y-3">
             <TrendGraph
               data={marine.waterTemp} nowTime={nowTime} color="#0891b2"
-              label="Vandtemp" unit="°C" height={130} fillBelow
+              label="Vandtemp" unit="°C" height={140} fillBelow
               currentValue={current.waterTempC !== undefined ? `${current.waterTempC}` : undefined}
             />
             <TrendGraph
               data={marine.current.map(c => ({ time: c.time, value: c.speed }))}
               nowTime={nowTime} color="#6366f1"
-              label="Strøm" unit=" m/s" height={130}
+              label="Strøm" unit=" m/s" height={140}
               currentValue={current.currentMs !== undefined
                 ? `${current.currentMs.toFixed(2)}`
                 : undefined}
@@ -223,7 +223,7 @@ export function TodayForecast() {
             />
             <TrendGraph
               data={marine.waterLevel} nowTime={nowTime} color="#0ea5e9"
-              label="Vandstand" unit=" cm" height={130} fillBelow
+              label="Vandstand" unit=" cm" height={140} fillBelow
               currentValue={current.waterLevelCm !== undefined
                 ? `${current.waterLevelCm > 0 ? '+' : ''}${current.waterLevelCm}`
                 : undefined}
@@ -232,7 +232,7 @@ export function TodayForecast() {
             <TrendGraph
               data={air.wind.map(w => ({ time: w.time, value: w.speed }))}
               nowTime={nowTime} color="#f59e0b"
-              label="Vind" unit=" m/s" height={130}
+              label="Vind" unit=" m/s" height={140}
               currentValue={current.windMs !== undefined
                 ? `${current.windMs}`
                 : undefined}
@@ -240,7 +240,7 @@ export function TodayForecast() {
             />
             <TrendGraph
               data={air.cloudCover} nowTime={nowTime} color="#94a3b8"
-              label="Skydække" unit="%" height={130} fillBelow
+              label="Skydække" unit="%" height={140} fillBelow
               currentValue={current.cloudCover !== undefined ? `${Math.round(current.cloudCover)}` : undefined}
               formatVal={v => `${Math.round(v)}`}
             />
@@ -259,20 +259,20 @@ export function TodayForecast() {
       {showSecondary && (
         <div className="mt-2 pt-2 border-t border-slate-100 space-y-3">
             <TrendGraph data={air.temp} nowTime={nowTime} color="#ef4444"
-              label="Lufttemp" unit="°C" height={90}
+              label="Lufttemp" unit="°C" height={100}
               currentValue={current.airTempC !== undefined ? `${current.airTempC}` : undefined} />
             <TrendGraph data={air.pressure} nowTime={nowTime} color="#8b5cf6"
-              label="Tryk" unit=" hPa" height={90}
+              label="Tryk" unit=" hPa" height={100}
               currentValue={current.pressureHpa !== undefined ? `${Math.round(current.pressureHpa)}` : undefined}
               formatVal={v => `${Math.round(v)}`} />
             <TrendGraph data={marine.salinity} nowTime={nowTime} color="#14b8a6"
-              label="Salinitet" unit="‰" height={90}
+              label="Salinitet" unit="‰" height={100}
               currentValue={current.salinityPsu !== undefined ? `${current.salinityPsu}` : undefined} />
             <TrendGraph data={marine.waves} nowTime={nowTime} color="#3b82f6"
-              label="Bølger" unit=" m" height={90}
+              label="Bølger" unit=" m" height={100}
               currentValue={current.waveHeightM !== undefined ? `${current.waveHeightM}` : undefined} />
             <TrendGraph data={air.precip} nowTime={nowTime} color="#60a5fa"
-              label="Nedbør" unit=" mm" height={90} fillBelow formatVal={v => v.toFixed(1)} />
+              label="Nedbør" unit=" mm" height={100} fillBelow formatVal={v => v.toFixed(1)} />
         </div>
       )}
 

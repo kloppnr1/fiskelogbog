@@ -85,7 +85,7 @@ export function TrendGraph({
   // Overlap prevention — min 7% spacing, skip edges
   const dailyLabels: typeof candidateLabels = [];
   for (const lbl of candidateLabels) {
-    if (lbl.pct < 2 || lbl.pct > 96) continue;
+    if (lbl.pct < 3 || lbl.pct > 97) continue;
     const last = dailyLabels[dailyLabels.length - 1];
     if (!last || lbl.pct - last.pct >= 7) {
       dailyLabels.push(lbl);
@@ -95,17 +95,24 @@ export function TrendGraph({
   // Direction arrows — ONE big arrow per day at noon, with text label
   const arrows: { pct: number; deg: number; label: string }[] = [];
   if (directions) {
-    const seenDays = new Set<string>();
+    // Group directions by day
+    const dayMap = new Map<string, HourlyVector[]>();
     for (const dir of directions) {
-      const dt = new Date(dir.time);
-      const h = dt.getUTCHours();
-      if (h !== 12) continue;
-      const dayKey = dt.toISOString().slice(0, 10);
-      if (seenDays.has(dayKey)) continue;
-      seenDays.add(dayKey);
-      const pct = toXPct(new Date(dir.time).getTime());
+      const dayKey = new Date(dir.time).toISOString().slice(0, 10);
+      if (!dayMap.has(dayKey)) dayMap.set(dayKey, []);
+      dayMap.get(dayKey)!.push(dir);
+    }
+    // For each day, pick hour-12 entry or closest to noon
+    for (const [, entries] of dayMap) {
+      let best = entries[0];
+      let bestDist = Math.abs(new Date(best.time).getUTCHours() - 12);
+      for (const e of entries) {
+        const dist = Math.abs(new Date(e.time).getUTCHours() - 12);
+        if (dist < bestDist) { best = e; bestDist = dist; }
+      }
+      const pct = toXPct(new Date(best.time).getTime());
       if (pct > 2 && pct < 98) {
-        arrows.push({ pct, deg: dir.direction, label: windDirToLabel(dir.direction) });
+        arrows.push({ pct, deg: best.direction, label: windDirToLabel(best.direction) });
       }
     }
   }
@@ -147,7 +154,7 @@ export function TrendGraph({
 
       {/* Graph — scrollable */}
       <div className="flex-1 overflow-x-auto" ref={scrollRef}>
-        <div className="relative" style={{ height, width: `${graphWidth + 40}px`, paddingRight: '40px' }}>
+        <div className="relative" style={{ height, width: `${graphWidth + 100}px`, paddingLeft: '50px', paddingRight: '50px' }}>
           {/* SVG line */}
           <svg
             viewBox={`0 0 ${svgW} ${svgH}`}
