@@ -1,6 +1,6 @@
 /**
  * TrendGraph — a single trend line with HTML-overlaid labels and direction arrows.
- * Uses SVG only for the line/fill, HTML for all text (so font sizing is pixel-perfect).
+ * SVG for line/fill only. HTML for all text (pixel-perfect sizing).
  */
 
 import { useEffect, useRef } from 'react';
@@ -20,7 +20,7 @@ interface Props {
 }
 
 export function TrendGraph({
-  data, nowTime, color, height = 100, unit = '', label,
+  data, nowTime, color, height = 120, unit = '', label,
   currentValue, fillBelow = false, directions,
   formatVal = v => `${Math.round(v * 10) / 10}`,
 }: Props) {
@@ -37,20 +37,19 @@ export function TrendGraph({
   const tMax = Math.max(...times);
   const tRange = tMax - tMin || 1;
 
-  // Use fixed pixel width per hour for consistent readability
-  // 7 days × 24h = 168 hours. At 8px/hour = 1344px → scrollable on mobile, great on desktop
-  const pxPerHour = 8;
+  // 7 days × 24h = 168 hours. 12px/hour = ~2000px — ensures scroll on all devices
+  const pxPerHour = 12;
   const totalW = Math.round(((tMax - tMin) / 3600000) * pxPerHour);
-  const toXPx = (t: number) => ((t - tMin) / tRange) * totalW;
   const toXPct = (t: number) => ((t - tMin) / tRange) * 100;
-  const toYPct = (v: number) => (1 - (v - min) / range) * 100;
 
   const nowPct = toXPct(nowMs);
 
-  // Build SVG path in percentage-based viewBox
+  // SVG coordinates
   const svgW = 1000, svgH = 1000;
+  const padTop = 200; // Reserve top 20% for labels
+  const padBot = 200; // Reserve bottom 20% for arrow+label
   const toSvgX = (t: number) => ((t - tMin) / tRange) * svgW;
-  const toSvgY = (v: number) => (1 - (v - min) / range) * svgH;
+  const toSvgY = (v: number) => padTop + (1 - (v - min) / range) * (svgH - padTop - padBot);
 
   const pastPoints: string[] = [];
   const futurePoints: string[] = [];
@@ -66,16 +65,16 @@ export function TrendGraph({
   }
 
   const fillD = fillBelow && pastPoints.length
-    ? `M ${toSvgX(times[0]).toFixed(0)},${svgH} L ${pastPoints.join(' L ')} L ${toSvgX(times[pastPoints.length - 1]).toFixed(0)},${svgH} Z`
+    ? `M ${toSvgX(times[0]).toFixed(0)},${svgH - padBot} L ${pastPoints.join(' L ')} L ${toSvgX(times[pastPoints.length - 1]).toFixed(0)},${svgH - padBot} Z`
     : '';
 
-  // Value labels every ~6 hours (00, 06, 12, 18) with overlap prevention
+  // Value labels — every 12 hours (00, 12) for cleaner look
   const candidateLabels: { pct: number; text: string }[] = [];
   const seenSlots = new Set<string>();
   data.forEach((d, i) => {
     const dt = new Date(d.time);
     const h = dt.getUTCHours();
-    if (h !== 0 && h !== 6 && h !== 12 && h !== 18) return;
+    if (h !== 0 && h !== 12) return;
     const slotKey = `${dt.toISOString().slice(0, 10)}-${h}`;
     if (seenSlots.has(slotKey)) return;
     seenSlots.add(slotKey);
@@ -90,141 +89,150 @@ export function TrendGraph({
     candidateLabels.push({ pct: toXPct(times[i]), text });
   });
 
-  // Filter to prevent overlap: estimate label width in % of graph
-  // Typical label ~90px at 18px bold; graph width ~1344px → ~6.7%. Use 8% for safety.
-  const MIN_SPACING = 8;
+  // Overlap prevention — min 7% spacing, skip edges
   const dailyLabels: typeof candidateLabels = [];
-  for (const label of candidateLabels) {
+  for (const lbl of candidateLabels) {
+    if (lbl.pct < 2 || lbl.pct > 96) continue;
     const last = dailyLabels[dailyLabels.length - 1];
-    if (!last || label.pct - last.pct >= MIN_SPACING) {
-      // Skip labels too close to the right edge (last 2%)
-      if (label.pct > 98) continue;
-      dailyLabels.push(label);
+    if (!last || lbl.pct - last.pct >= 7) {
+      dailyLabels.push(lbl);
     }
   }
 
-  // Direction arrows every ~3h
-  const arrows: { pct: number; deg: number }[] = [];
+  // Direction arrows — ONE big arrow per day at noon, with text label
+  const arrows: { pct: number; deg: number; label: string }[] = [];
   if (directions) {
-    const step = Math.max(1, Math.floor(directions.length / 20));
-    for (let i = 0; i < directions.length; i += step) {
-      const t = new Date(directions[i].time).getTime();
-      arrows.push({ pct: toXPct(t), deg: directions[i].direction });
+    const seenDays = new Set<string>();
+    for (const dir of directions) {
+      const dt = new Date(dir.time);
+      const h = dt.getUTCHours();
+      if (h !== 12) continue;
+      const dayKey = dt.toISOString().slice(0, 10);
+      if (seenDays.has(dayKey)) continue;
+      seenDays.add(dayKey);
+      const pct = toXPct(new Date(dir.time).getTime());
+      if (pct > 2 && pct < 98) {
+        arrows.push({ pct, deg: dir.direction, label: windDirToLabel(dir.direction) });
+      }
     }
   }
 
-  // Now dot position
+  // Now dot Y position
+  const toYPct = (v: number) => {
+    const svgY = toSvgY(v);
+    return (svgY / svgH) * 100;
+  };
   let nowDotYPct: number | undefined;
   if (pastPoints.length > 0) {
-    const lastPastIdx = pastPoints.length - 1;
-    nowDotYPct = toYPct(data[lastPastIdx].value);
+    nowDotYPct = toYPct(data[pastPoints.length - 1].value);
   }
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const graphWidth = Math.max(totalW, 600);
 
-  // Auto-scroll to "now" on mount (slight delay for layout)
+  // Auto-scroll to "now"
   useEffect(() => {
     requestAnimationFrame(() => {
       const el = scrollRef.current;
       if (!el) return;
       const nowPos = (nowPct / 100) * graphWidth;
-      const center = nowPos - el.clientWidth / 3; // Show "now" in left third so forecast is visible
-      el.scrollLeft = Math.max(0, center);
+      el.scrollLeft = Math.max(0, nowPos - el.clientWidth / 3);
     });
   }, [nowPct, graphWidth]);
 
   return (
-    <div className="flex items-stretch gap-0 mb-1">
-      {/* Left label — OUTSIDE scroll container, always visible */}
-      <div className="w-[90px] shrink-0 text-right pr-3 flex flex-col justify-center z-20 bg-white">
-        <div className="text-[15px] font-bold text-slate-500 leading-tight">{label}</div>
+    <div className="flex items-stretch gap-0 mb-2">
+      {/* Left label — fixed, outside scroll */}
+      <div className="w-[70px] sm:w-[100px] shrink-0 text-right pr-2 sm:pr-3 flex flex-col justify-center bg-white z-20">
+        <div className="text-[12px] sm:text-[14px] font-bold text-slate-500 leading-tight">{label}</div>
         {currentValue && (
-          <div className="text-[24px] font-black leading-tight" style={{ color }}>
+          <div className="text-[16px] sm:text-[22px] font-black leading-tight" style={{ color }}>
             {currentValue}{unit}
           </div>
         )}
       </div>
 
-      {/* Graph area — scrolls independently, auto-scrolls to "now" */}
+      {/* Graph — scrollable */}
       <div className="flex-1 overflow-x-auto" ref={scrollRef}>
-        <div className="relative" style={{ height, width: `${graphWidth}px` }}>
-        {/* SVG lines only */}
-        <svg
-          viewBox={`0 0 ${svgW} ${svgH}`}
-          className="absolute inset-0 w-full h-full"
-          preserveAspectRatio="none"
-        >
-          {fillD && <path d={fillD} fill={color} opacity="0.08" />}
-          {pastPoints.length > 1 && (
-            <polyline points={pastPoints.join(' ')} fill="none" stroke={color}
-              strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke" />
-          )}
-          {futurePoints.length > 1 && (
-            <polyline points={futurePoints.join(' ')} fill="none" stroke={color}
-              strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
-              strokeDasharray="12,8" opacity="0.4"
-              vectorEffect="non-scaling-stroke" />
-          )}
-        </svg>
-
-        {/* Now vertical line — HTML */}
-        <div
-          className="absolute top-0 bottom-0 border-l-2 border-dashed border-slate-500"
-          style={{ left: `${nowPct}%` }}
-        />
-
-        {/* Now dot */}
-        {nowDotYPct !== undefined && (
-          <div
-            className="absolute w-6 h-6 rounded-full border-[3px] border-white shadow-lg"
-            style={{
-              left: `${nowPct}%`, top: `${nowDotYPct}%`,
-              transform: 'translate(-50%, -50%)',
-              backgroundColor: color,
-            }}
-          />
-        )}
-
-        {/* Daily value pills — HTML, pixel-perfect sizing */}
-        {dailyLabels.map((dl, i) => (
-          <div
-            key={i}
-            className="absolute -top-1 transform -translate-x-1/2 px-2 py-0.5 rounded-md border text-center whitespace-nowrap"
-            style={{
-              left: `${dl.pct}%`,
-              backgroundColor: 'white',
-              borderColor: color,
-              color: color,
-              fontSize: '18px',
-              fontWeight: 800,
-              lineHeight: '1.2',
-              zIndex: 10,
-            }}
+        <div className="relative" style={{ height, width: `${graphWidth + 40}px`, paddingRight: '40px' }}>
+          {/* SVG line */}
+          <svg
+            viewBox={`0 0 ${svgW} ${svgH}`}
+            className="absolute inset-0 w-full h-full"
+            preserveAspectRatio="none"
           >
-            {dl.text}
-          </div>
-        ))}
+            {fillD && <path d={fillD} fill={color} opacity="0.06" />}
+            {pastPoints.length > 1 && (
+              <polyline points={pastPoints.join(' ')} fill="none" stroke={color}
+                strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke" />
+            )}
+            {futurePoints.length > 1 && (
+              <polyline points={futurePoints.join(' ')} fill="none" stroke={color}
+                strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                strokeDasharray="10,7" opacity="0.4"
+                vectorEffect="non-scaling-stroke" />
+            )}
+          </svg>
 
-        {/* Direction arrows — HTML, big and bold */}
-        {arrows.length > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 h-6">
-            {arrows.map((a, i) => (
-              <div
-                key={i}
-                className="absolute bottom-0 transform -translate-x-1/2"
-                style={{ left: `${a.pct}%` }}
-              >
-                <svg width="28" height="28" viewBox="0 0 28 28"
-                  style={{ transform: `rotate(${a.deg}deg)` }}>
-                  <polygon points="14,1 26,24 14,16 2,24"
-                    fill={color} stroke="white" strokeWidth="2" />
-                </svg>
-              </div>
-            ))}
-          </div>
-        )}
+          {/* NOW line */}
+          <div
+            className="absolute top-0 bottom-0 border-l-2 border-dashed border-slate-600 z-10"
+            style={{ left: `${nowPct}%` }}
+          />
+
+          {/* NOW dot */}
+          {nowDotYPct !== undefined && (
+            <div
+              className="absolute w-5 h-5 rounded-full border-[3px] border-white shadow-lg z-20"
+              style={{
+                left: `${nowPct}%`, top: `${nowDotYPct}%`,
+                transform: 'translate(-50%, -50%)',
+                backgroundColor: color,
+              }}
+            />
+          )}
+
+          {/* Value labels — top area */}
+          {dailyLabels.map((dl, i) => (
+            <div
+              key={i}
+              className="absolute transform -translate-x-1/2 px-2.5 py-1 rounded-lg border-2 text-center whitespace-nowrap shadow-sm"
+              style={{
+                left: `${dl.pct}%`,
+                top: '2px',
+                backgroundColor: 'white',
+                borderColor: color,
+                color: color,
+                fontSize: '15px',
+                fontWeight: 800,
+                lineHeight: '1.1',
+                zIndex: 15,
+              }}
+            >
+              {dl.text}
+            </div>
+          ))}
+
+          {/* Direction arrows — ONE per day, big with text label */}
+          {arrows.length > 0 && (
+            <div className="absolute bottom-0 left-0 right-0 h-12 z-10">
+              {arrows.map((a, i) => (
+                <div
+                  key={i}
+                  className="absolute bottom-0 -translate-x-1/2 flex flex-col items-center"
+                  style={{ left: `${a.pct}%` }}
+                >
+                  <svg width="28" height="28" viewBox="0 0 28 28"
+                    style={{ transform: `rotate(${a.deg}deg)`, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))' }}>
+                    <polygon points="14,1 26,22 14,16 2,22"
+                      fill={color} stroke="white" strokeWidth="2" strokeLinejoin="round" />
+                  </svg>
+                  <span className="text-[11px] font-bold leading-none mt-0.5" style={{ color }}>{a.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

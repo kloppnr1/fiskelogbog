@@ -111,22 +111,17 @@ function SpotSection({ spot, data, nowTime }: { spot: SpotConfig; data: Forecast
         className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 transition-colors text-left"
       >
         <span className={`text-[11px] transition-transform ${expanded ? 'rotate-90' : ''}`}>▶</span>
-        <span className="text-[13px] font-bold text-slate-600">{spot.short}</span>
-        <span className="text-[11px] text-slate-400">{spot.species.join(' · ')}</span>
-        <div className="ml-auto flex items-center gap-3 text-[12px] text-slate-500">
+        <span className="text-[13px] font-bold text-slate-600 whitespace-nowrap">{spot.short}</span>
+        <span className="text-[10px] text-slate-400 hidden sm:inline">{spot.species.join(' · ')}</span>
+        <div className="ml-auto flex items-center gap-2 text-[11px] text-slate-500 whitespace-nowrap">
           {!isFreshwater && current.waterTempC !== undefined && (
-            <span className="text-cyan-600 font-bold">{current.waterTempC}°C</span>
+            <span className="text-cyan-600 font-bold">{current.waterTempC}°</span>
           )}
           {current.windMs !== undefined && current.windDir !== undefined && (
-            <span className="flex items-center gap-1 font-medium">
-              <svg width="14" height="14" viewBox="0 0 14 14" style={{ transform: `rotate(${current.windDir}deg)` }}>
-                <polygon points="7,1 12,12 7,8 2,12" fill="#f59e0b" />
-              </svg>
-              {current.windMs} m/s
-            </span>
+            <span className="font-medium">{windDirToLabel(current.windDir)} {current.windMs}m/s</span>
           )}
           {!isFreshwater && current.currentMs !== undefined && (
-            <span className="font-medium">{current.currentMs} m/s strøm</span>
+            <span className="font-medium text-indigo-500">{current.currentMs}m/s↗</span>
           )}
         </div>
       </button>
@@ -213,22 +208,22 @@ export function TodayForecast() {
         <div className="space-y-2">
             <TrendGraph
               data={marine.waterTemp} nowTime={nowTime} color="#0891b2"
-              label="Vandtemp" unit="°C" height={110} fillBelow
+              label="Vandtemp" unit="°C" height={130} fillBelow
               currentValue={current.waterTempC !== undefined ? `${current.waterTempC}` : undefined}
             />
             <TrendGraph
               data={marine.current.map(c => ({ time: c.time, value: c.speed }))}
               nowTime={nowTime} color="#6366f1"
-              label="Strøm" unit=" m/s" height={100}
+              label="Strøm" unit=" m/s" height={120}
               currentValue={current.currentMs !== undefined
-                ? `${current.currentMs} ${current.currentDir !== undefined ? windDirToLabel(current.currentDir) : ''}`
+                ? `${current.currentMs.toFixed(2)} ${current.currentDir !== undefined ? windDirToLabel(current.currentDir) : ''}`
                 : undefined}
               directions={marine.current}
               formatVal={v => v.toFixed(2)}
             />
             <TrendGraph
               data={marine.waterLevel} nowTime={nowTime} color="#0ea5e9"
-              label="Vandstand" unit=" cm" height={100} fillBelow
+              label="Vandstand" unit=" cm" height={120} fillBelow
               currentValue={current.waterLevelCm !== undefined
                 ? `${current.waterLevelCm > 0 ? '+' : ''}${current.waterLevelCm}`
                 : undefined}
@@ -237,7 +232,7 @@ export function TodayForecast() {
             <TrendGraph
               data={air.wind.map(w => ({ time: w.time, value: w.speed }))}
               nowTime={nowTime} color="#f59e0b"
-              label="Vind" unit=" m/s" height={90}
+              label="Vind" unit=" m/s" height={110}
               currentValue={current.windMs !== undefined
                 ? `${current.windMs} ${current.windDir !== undefined ? windDirToLabel(current.windDir) : ''}`
                 : undefined}
@@ -245,7 +240,7 @@ export function TodayForecast() {
             />
             <TrendGraph
               data={air.cloudCover} nowTime={nowTime} color="#94a3b8"
-              label="Skydække" unit="%" height={80} fillBelow
+              label="Skydække" unit="%" height={100} fillBelow
               currentValue={current.cloudCover !== undefined ? `${Math.round(current.cloudCover)}` : undefined}
               formatVal={v => `${Math.round(v)}`}
             />
@@ -264,17 +259,17 @@ export function TodayForecast() {
       {showSecondary && (
         <div className="mt-2 pt-2 border-t border-slate-100 space-y-1">
             <TrendGraph data={air.temp} nowTime={nowTime} color="#ef4444"
-              label="Lufttemp" unit="°C" height={60}
+              label="Lufttemp" unit="°C" height={80}
               currentValue={current.airTempC !== undefined ? `${current.airTempC}` : undefined} />
             <TrendGraph data={air.pressure} nowTime={nowTime} color="#8b5cf6"
-              label="Tryk" unit=" hPa" height={60}
+              label="Tryk" unit=" hPa" height={80}
               currentValue={current.pressureHpa !== undefined ? `${Math.round(current.pressureHpa)}` : undefined}
               formatVal={v => `${Math.round(v)}`} />
             <TrendGraph data={marine.salinity} nowTime={nowTime} color="#14b8a6"
-              label="Salinitet" unit="‰" height={60}
+              label="Salinitet" unit="‰" height={80}
               currentValue={current.salinityPsu !== undefined ? `${current.salinityPsu}` : undefined} />
             <TrendGraph data={marine.waves} nowTime={nowTime} color="#3b82f6"
-              label="Bølger" unit=" m" height={60}
+              label="Bølger" unit=" m" height={80}
               currentValue={current.waveHeightM !== undefined ? `${current.waveHeightM}` : undefined} />
             <TrendGraph data={air.precip} nowTime={nowTime} color="#60a5fa"
               label="Nedbør" unit=" mm" height={48} fillBelow formatVal={v => v.toFixed(1)} />
