@@ -78,14 +78,7 @@ export function TrendGraph({
     const slotKey = `${dt.toISOString().slice(0, 10)}-${h}`;
     if (seenSlots.has(slotKey)) return;
     seenSlots.add(slotKey);
-    let text = `${formatVal(d.value)}${unit}`;
-    if (directions) {
-      const closest = directions.reduce((best, dir) => {
-        const diff = Math.abs(new Date(dir.time).getTime() - times[i]);
-        return diff < best.diff ? { diff, dir } : best;
-      }, { diff: Infinity, dir: directions[0] });
-      if (closest.dir) text = `${formatVal(d.value)} ${windDirToLabel(closest.dir.direction)}`;
-    }
+    const text = `${formatVal(d.value)}${unit}`;
     candidateLabels.push({ pct: toXPct(times[i]), text });
   });
 
@@ -141,7 +134,7 @@ export function TrendGraph({
   }, [nowPct, graphWidth]);
 
   return (
-    <div className="flex items-stretch gap-0 mb-2">
+    <div className="flex items-stretch gap-0 mb-3">
       {/* Left label — fixed, outside scroll */}
       <div className="w-[70px] sm:w-[100px] shrink-0 text-right pr-2 sm:pr-3 flex flex-col justify-center bg-white z-20">
         <div className="text-[12px] sm:text-[14px] font-bold text-slate-500 leading-tight">{label}</div>
@@ -216,19 +209,19 @@ export function TrendGraph({
 
           {/* Direction arrows — ONE per day, big with text label */}
           {arrows.length > 0 && (
-            <div className="absolute bottom-0 left-0 right-0 h-12 z-10">
+            <div className="absolute bottom-0 left-0 right-0 h-14 z-10">
               {arrows.map((a, i) => (
                 <div
                   key={i}
                   className="absolute bottom-0 -translate-x-1/2 flex flex-col items-center"
                   style={{ left: `${a.pct}%` }}
                 >
-                  <svg width="28" height="28" viewBox="0 0 28 28"
-                    style={{ transform: `rotate(${a.deg}deg)`, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))' }}>
-                    <polygon points="14,1 26,22 14,16 2,22"
-                      fill={color} stroke="white" strokeWidth="2" strokeLinejoin="round" />
+                  <svg width="32" height="32" viewBox="0 0 32 32"
+                    style={{ transform: `rotate(${a.deg}deg)`, filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.3))' }}>
+                    <polygon points="16,1 30,25 16,18 2,25"
+                      fill={color} stroke="white" strokeWidth="2.5" strokeLinejoin="round" />
                   </svg>
-                  <span className="text-[11px] font-bold leading-none mt-0.5" style={{ color }}>{a.label}</span>
+                  <span className="text-[12px] font-extrabold leading-none mt-0.5" style={{ color, textShadow: '0 0 3px white, 0 0 3px white' }}>{a.label}</span>
                 </div>
               ))}
             </div>

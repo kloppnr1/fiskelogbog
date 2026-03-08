@@ -40,7 +40,7 @@ function TimeAxis({ data, nowTime }: { data: HourlyPoint[]; nowTime: string }) {
   }
 
   return (
-    <div className="relative h-6 ml-[80px]">
+    <div className="relative h-6 ml-[70px] sm:ml-[100px]">
       {dayLabels.map((d, i) => (
         <span key={i}
           className={`absolute text-[12px] font-extrabold tracking-wider ${d.isToday ? 'text-sky-600' : 'text-slate-400'}`}
@@ -205,7 +205,7 @@ export function TodayForecast() {
       <div>
         <TimeAxis data={timeAxisData} nowTime={nowTime} />
 
-        <div className="space-y-2">
+        <div className="space-y-3">
             <TrendGraph
               data={marine.waterTemp} nowTime={nowTime} color="#0891b2"
               label="Vandtemp" unit="°C" height={130} fillBelow
@@ -214,16 +214,16 @@ export function TodayForecast() {
             <TrendGraph
               data={marine.current.map(c => ({ time: c.time, value: c.speed }))}
               nowTime={nowTime} color="#6366f1"
-              label="Strøm" unit=" m/s" height={120}
+              label="Strøm" unit=" m/s" height={130}
               currentValue={current.currentMs !== undefined
-                ? `${current.currentMs.toFixed(2)} ${current.currentDir !== undefined ? windDirToLabel(current.currentDir) : ''}`
+                ? `${current.currentMs.toFixed(2)}`
                 : undefined}
               directions={marine.current}
               formatVal={v => v.toFixed(2)}
             />
             <TrendGraph
               data={marine.waterLevel} nowTime={nowTime} color="#0ea5e9"
-              label="Vandstand" unit=" cm" height={120} fillBelow
+              label="Vandstand" unit=" cm" height={130} fillBelow
               currentValue={current.waterLevelCm !== undefined
                 ? `${current.waterLevelCm > 0 ? '+' : ''}${current.waterLevelCm}`
                 : undefined}
@@ -232,15 +232,15 @@ export function TodayForecast() {
             <TrendGraph
               data={air.wind.map(w => ({ time: w.time, value: w.speed }))}
               nowTime={nowTime} color="#f59e0b"
-              label="Vind" unit=" m/s" height={110}
+              label="Vind" unit=" m/s" height={130}
               currentValue={current.windMs !== undefined
-                ? `${current.windMs} ${current.windDir !== undefined ? windDirToLabel(current.windDir) : ''}`
+                ? `${current.windMs}`
                 : undefined}
               directions={air.wind}
             />
             <TrendGraph
               data={air.cloudCover} nowTime={nowTime} color="#94a3b8"
-              label="Skydække" unit="%" height={100} fillBelow
+              label="Skydække" unit="%" height={130} fillBelow
               currentValue={current.cloudCover !== undefined ? `${Math.round(current.cloudCover)}` : undefined}
               formatVal={v => `${Math.round(v)}`}
             />
@@ -257,22 +257,22 @@ export function TodayForecast() {
       </button>
 
       {showSecondary && (
-        <div className="mt-2 pt-2 border-t border-slate-100 space-y-1">
+        <div className="mt-2 pt-2 border-t border-slate-100 space-y-3">
             <TrendGraph data={air.temp} nowTime={nowTime} color="#ef4444"
-              label="Lufttemp" unit="°C" height={80}
+              label="Lufttemp" unit="°C" height={90}
               currentValue={current.airTempC !== undefined ? `${current.airTempC}` : undefined} />
             <TrendGraph data={air.pressure} nowTime={nowTime} color="#8b5cf6"
-              label="Tryk" unit=" hPa" height={80}
+              label="Tryk" unit=" hPa" height={90}
               currentValue={current.pressureHpa !== undefined ? `${Math.round(current.pressureHpa)}` : undefined}
               formatVal={v => `${Math.round(v)}`} />
             <TrendGraph data={marine.salinity} nowTime={nowTime} color="#14b8a6"
-              label="Salinitet" unit="‰" height={80}
+              label="Salinitet" unit="‰" height={90}
               currentValue={current.salinityPsu !== undefined ? `${current.salinityPsu}` : undefined} />
             <TrendGraph data={marine.waves} nowTime={nowTime} color="#3b82f6"
-              label="Bølger" unit=" m" height={80}
+              label="Bølger" unit=" m" height={90}
               currentValue={current.waveHeightM !== undefined ? `${current.waveHeightM}` : undefined} />
             <TrendGraph data={air.precip} nowTime={nowTime} color="#60a5fa"
-              label="Nedbør" unit=" mm" height={48} fillBelow formatVal={v => v.toFixed(1)} />
+              label="Nedbør" unit=" mm" height={90} fillBelow formatVal={v => v.toFixed(1)} />
         </div>
       )}
 
